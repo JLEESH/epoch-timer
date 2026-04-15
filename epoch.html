@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epoch Speedrun</title>
+<style>
+:root {
+  --bg: #111827;
+  --surface: #1f2937;
+  --surface2: #374151;
+  --border: #4b5563;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --text: #f9fafb;
+  --text-dim: #9ca3af;
+  --text-muted: #6b7280;
+  --timer-idle: #d1d5db;
+  --timer-holding: #ef4444;
+  --timer-ready: #22c55e;
+  --timer-running: #f9fafb;
+  --timer-stopped: #f59e0b;
+  --radius: 10px;
+  --mono: 'Courier New', Courier, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Layout ─────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+header h1 { font-size: 1.2rem; letter-spacing: .05em; }
+header h1 span { color: var(--accent); }
+.header-right { display: flex; gap: 8px; align-items: center; }
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ─── Side panel ──────────────────────────────────────── */
+#side-panel {
+  grid-row: 1 / -1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-section h2 {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.form-row label { font-size: .78rem; color: var(--text-dim); }
+.form-row input, .form-row select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .88rem;
+  padding: 6px 10px;
+  width: 100%;
+}
+.form-row input:focus, .form-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.form-row input[type="number"] { font-family: var(--mono); }
+
+.range-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.range-toggle button {
+  flex: 1;
+  padding: 6px;
+  font-size: .8rem;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.range-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.stat-box {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.stat-box .val { font-size: 1.4rem; font-weight: 700; font-family: var(--mono); }
+.stat-box .lbl { font-size: .65rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-top: 2px; }
+.stat-box.green .val { color: var(--green); }
+.stat-box.red .val { color: var(--red); }
+.stat-box.yellow .val { color: var(--yellow); }
+.stat-box.purple .val { color: var(--accent-hover); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: .83rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s, transform .08s;
+}
+.btn:hover { opacity: .85; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-outline {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { color: var(--text); border-color: var(--text-dim); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-yellow { background: var(--yellow); color: #111; }
+.btn-red { background: var(--red); color: #fff; }
+.btn-sm { padding: 5px 10px; font-size: .75rem; }
+.btn-full { width: 100%; justify-content: center; }
+
+.export-btns { display: flex; gap: 8px; }
+.export-btns .btn { flex: 1; justify-content: center; }
+
+/* ─── Game area ───────────────────────────────────────── */
+#game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 20px;
+  gap: 24px;
+}
+
+#puzzle-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 40px;
+  text-align: center;
+  width: 100%;
+  max-width: 560px;
+}
+#puzzle-label {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+#epoch-display {
+  font-family: var(--mono);
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--text);
+  margin-bottom: 8px;
+  min-height: 3.2rem;
+}
+#format-hint {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+#format-hint span { color: var(--accent-hover); font-family: var(--mono); }
+
+/* ─── Answer section ──────────────────────────────────── */
+#answer-section {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Text mode */
+#text-input-row {
+  display: flex;
+  gap: 8px;
+}
+#answer-text {
+  flex: 1;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1rem;
+  padding: 10px 14px;
+  transition: border-color .15s;
+}
+#answer-text:focus { outline: none; border-color: var(--accent); }
+#answer-text.correct { border-color: var(--green); }
+#answer-text.incorrect { border-color: var(--red); }
+
+/* Structured mode */
+#structured-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.struct-sep { color: var(--text-muted); font-size: .9rem; }
+.struct-field {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: .95rem;
+  padding: 8px 6px;
+  text-align: center;
+  transition: border-color .15s;
+}
+.struct-field:focus { outline: none; border-color: var(--accent); }
+.struct-field.correct { border-color: var(--green); }
+.struct-field.incorrect { border-color: var(--red); }
+#f-year  { width: 60px; }
+#f-month { width: 52px; }
+#f-day   { width: 44px; }
+#f-hour  { width: 44px; }
+#f-min   { width: 44px; }
+#f-sec   { width: 44px; }
+select.struct-field { width: 120px; padding: 8px 6px; cursor: pointer; }
+
+#submit-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+#feedback-msg {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: .88rem;
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+#feedback-msg.show { display: flex; }
+#feedback-msg.correct-fb { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.4); color: var(--green); }
+#feedback-msg.incorrect-fb { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; }
+#feedback-msg .fb-correct { color: var(--green); font-family: var(--mono); font-weight: 600; }
+
+/* ─── Timer ───────────────────────────────────────────── */
+#timer-section {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+#timer-display {
+  font-family: var(--mono);
+  font-size: 4.5rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--timer-idle);
+  transition: color .12s;
+  line-height: 1;
+  user-select: none;
+}
+#timer-display.holding  { color: var(--timer-holding); }
+#timer-display.ready    { color: var(--timer-ready); }
+#timer-display.running  { color: var(--timer-running); }
+#timer-display.stopped  { color: var(--timer-stopped); }
+
+#timer-hint {
+  font-size: .72rem;
+  color: var(--text-muted);
+  letter-spacing: .04em;
+  user-select: none;
+}
+
+/* ─── Session table ───────────────────────────────────── */
+#session-area {
+  border-top: 1px solid var(--border);
+  padding: 0 24px 20px;
+  overflow-x: auto;
+}
+#session-area h2 {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin: 14px 0 10px;
+}
+#history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+}
+#history-table th {
+  text-align: left;
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+}
+#history-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(75,85,99,.4);
+  font-family: var(--mono);
+  font-size: .82rem;
+}
+#history-table tr:last-child td { border-bottom: none; }
+#history-table tr.correct-row td:first-child { border-left: 3px solid var(--green); }
+#history-table tr.incorrect-row td:first-child { border-left: 3px solid var(--red); }
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: .7rem;
+  font-family: -apple-system, sans-serif;
+}
+.badge-green { background: rgba(34,197,94,.2); color: var(--green); }
+.badge-red   { background: rgba(239,68,68,.2); color: #fca5a5; }
+
+#empty-msg {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-size: .85rem;
+}
+
+/* ─── Input mode toggle ───────────────────────────────── */
+.input-mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0;
+  align-self: flex-end;
+}
+.input-mode-toggle button {
+  padding: 4px 12px;
+  font-size: .75rem;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.input-mode-toggle button.active { background: var(--accent); color: #fff; }
+
+#answer-mode-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ─── Scrollbar styling ───────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 700px) {
+  main { grid-template-columns: 1fr; }
+  #side-panel {
+    grid-row: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EPOCH <span>SPEEDRUN</span></h1>
+  <div class="header-right">
+    <button class="btn btn-outline btn-sm" id="settings-toggle">⚙ Settings</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── Side panel ── -->
+  <div id="side-panel">
+
+    <!-- Settings section -->
+    <div class="panel-section" id="settings-section">
+      <h2>Settings</h2>
+
+      <!-- Range type -->
+      <div class="range-toggle">
+        <button id="rt-epoch" class="active" onclick="setRangeType('epoch')">Epoch Range</button>
+        <button id="rt-date"  onclick="setRangeType('date')">Date Range</button>
+      </div>
+
+      <!-- Epoch range -->
+      <div id="epoch-range-inputs">
+        <div class="form-row">
+          <label>Min epoch (seconds)</label>
+          <input type="number" id="epoch-min" value="946684800" min="0">
+        </div>
+        <div class="form-row">
+          <label>Max epoch (seconds)</label>
+          <input type="number" id="epoch-max" value="1767225600" min="0">
+        </div>
+      </div>
+
+      <!-- Date range -->
+      <div id="date-range-inputs" style="display:none">
+        <div class="form-row">
+          <label>From date</label>
+          <input type="datetime-local" id="date-min" value="2000-01-01T00:00">
+        </div>
+        <div class="form-row">
+          <label>To date</label>
+          <input type="datetime-local" id="date-max" value="2025-01-01T00:00">
+        </div>
+      </div>
+
+      <!-- Format -->
+      <div class="form-row">
+        <label>Answer format</label>
+        <select id="fmt-select" onchange="onFormatChange()">
+          <option value="YYYY-MM-DD HH:mm:ss">YYYY-MM-DD HH:mm:ss</option>
+          <option value="YYYY-MM-DD HH:mm">YYYY-MM-DD HH:mm</option>
+          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+          <option value="MM/DD/YYYY HH:mm:ss">MM/DD/YYYY HH:mm:ss</option>
+          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+          <option value="YYYY/MM/DD">YYYY/MM/DD</option>
+          <option value="Month DD, YYYY">Month DD, YYYY</option>
+        </select>
+      </div>
+
+      <!-- Timezone -->
+      <div class="form-row">
+        <label>Timezone</label>
+        <select id="tz-select">
+          <option value="UTC">UTC</option>
+          <option value="local">Local (browser)</option>
+        </select>
+      </div>
+
+      <!-- Tolerance -->
+      <div class="form-row">
+        <label>Tolerance (seconds, ±)</label>
+        <input type="number" id="tolerance" value="0" min="0" max="86400">
+      </div>
+    </div>
+
+    <!-- Stats section -->
+    <div class="panel-section">
+      <h2>Session Stats</h2>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="val" id="stat-total">0</div><div class="lbl">Total</div></div>
+        <div class="stat-box green"><div class="val" id="stat-correct">0</div><div class="lbl">Correct</div></div>
+        <div class="stat-box red"><div class="val" id="stat-wrong">0</div><div class="lbl">Wrong</div></div>
+        <div class="stat-box yellow"><div class="val" id="stat-acc">—</div><div class="lbl">Accuracy</div></div>
+        <div class="stat-box purple"><div class="val" id="stat-avg">—</div><div class="lbl">Avg Time</div></div>
+        <div class="stat-box purple"><div class="val" id="stat-best">—</div><div class="lbl">Best Time</div></div>
+      </div>
+    </div>
+
+    <!-- Export section -->
+    <div class="panel-section">
+      <h2>Export Session</h2>
+      <div class="export-btns">
+        <button class="btn btn-outline" onclick="exportCSV()">⬇ CSV</button>
+        <button class="btn btn-outline" onclick="exportJSON()">⬇ JSON</button>
+      </div>
+    </div>
+
+  </div><!-- /side-panel -->
+
+  <!-- ── Game + timer area ── -->
+  <div id="game-area">
+
+    <!-- Puzzle card -->
+    <div id="puzzle-card">
+      <div id="puzzle-label">Unix Epoch (seconds)</div>
+      <div id="epoch-display">— — — — — — — — — —</div>
+      <div id="format-hint">Convert to: <span id="fmt-hint-text">YYYY-MM-DD HH:mm:ss</span> <span id="tz-hint-text" style="color:var(--text-muted)">(UTC)</span></div>
+    </div>
+
+    <!-- Answer section -->
+    <div id="answer-section">
+
+      <div id="answer-mode-row">
+        <span style="font-size:.78rem;color:var(--text-muted)">Answer input</span>
+        <div class="input-mode-toggle">
+          <button id="mode-text" class="active" onclick="setInputMode('text')">Text</button>
+          <button id="mode-struct" onclick="setInputMode('structured')">Structured</button>
+        </div>
+      </div>
+
+      <!-- Text input -->
+      <div id="text-input-row">
+        <input type="text" id="answer-text" placeholder="Type your answer…" autocomplete="off" spellcheck="false" onkeydown="onAnswerKeydown(event)">
+      </div>
+
+      <!-- Structured input (hidden initially) -->
+      <div id="structured-input-row" style="display:none">
+        <!-- populated by JS based on format -->
+      </div>
+
+      <div id="submit-btn-row">
+        <button class="btn btn-primary" id="submit-btn" style="flex:1" onclick="submitAnswer()">Submit (Enter)</button>
+        <button class="btn btn-outline" id="skip-btn" onclick="skipPuzzle()">Skip</button>
+      </div>
+
+      <div id="feedback-msg"></div>
+    </div>
+
+    <!-- Timer -->
+    <div id="timer-section">
+      <div id="timer-display">0.000</div>
+      <div id="timer-hint">Hold <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:.75rem">SPACE</kbd> to get ready · Release to start</div>
+    </div>
+
+  </div><!-- /game-area -->
+
+  <!-- ── Session history ── -->
+  <div id="session-area">
+    <h2>History</h2>
+    <div id="empty-msg">No attempts yet — start the game above!</div>
+    <table id="history-table" style="display:none">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Epoch</th>
+          <th>Correct Answer</th>
+          <th>Your Answer</th>
+          <th>Time (s)</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const S = {
+  // Timer
+  timerState: 'IDLE',   // IDLE | HOLDING | READY | RUNNING | STOPPED
+  timerStart: 0,
+  timerElapsed: 0,      // ms at last stop
+  holdStart: 0,
+  holdTimer: null,
+  rafId: null,
+  HOLD_THRESHOLD: 300,  // ms to hold before going READY
+
+  // Game
+  currentEpoch: null,
+  gameActive: false,
+  timerRunningForSolve: false,
+
+  // Settings
+  rangeType: 'epoch',
+  inputMode: 'text',
+
+  // Session
+  session: []
+};
+
+// ═══════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════
+const timerEl   = document.getElementById('timer-display');
+const timerHint = document.getElementById('timer-hint');
+
+function timerSetState(state) {
+  S.timerState = state;
+  timerEl.className = '';
+  if (state === 'HOLDING') {
+    timerEl.classList.add('holding');
+    timerEl.textContent = '0.000';
+    timerHint.textContent = 'Keep holding…';
+  } else if (state === 'READY') {
+    timerEl.classList.add('ready');
+    timerEl.textContent = '0.000';
+    timerHint.textContent = 'Release to start!';
+  } else if (state === 'RUNNING') {
+    timerEl.classList.add('running');
+    timerHint.textContent = 'Submit answer (Enter) to stop the timer';
+    startTimerRaf();
+  } else if (state === 'STOPPED') {
+    timerEl.classList.add('stopped');
+    stopTimerRaf();
+    timerHint.textContent = 'Hold SPACE to start next puzzle';
+  } else {
+    // IDLE
+    timerEl.textContent = formatTime(S.timerElapsed);
+    timerHint.innerHTML = 'Hold <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:.75rem">SPACE</kbd> to get ready · Release to start';
+  }
+}
+
+function startTimerRaf() {
+  S.timerStart = performance.now();
+  function tick() {
+    const elapsed = performance.now() - S.timerStart;
+    timerEl.textContent = formatTime(elapsed);
+    S.rafId = requestAnimationFrame(tick);
+  }
+  S.rafId = requestAnimationFrame(tick);
+}
+
+function stopTimerRaf() {
+  if (S.rafId) { cancelAnimationFrame(S.rafId); S.rafId = null; }
+  S.timerElapsed = performance.now() - S.timerStart;
+  timerEl.textContent = formatTime(S.timerElapsed);
+}
+
+function formatTime(ms) {
+  if (ms < 60000) {
+    return (ms / 1000).toFixed(3);
+  }
+  const m = Math.floor(ms / 60000);
+  const s = ((ms % 60000) / 1000).toFixed(3);
+  return `${m}:${s.padStart(7,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  KEYBOARD (spacebar timer + answer shortcuts)
+// ═══════════════════════════════════════════════════════
+let spaceDown = false;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    // Don't intercept if user is typing in an input (text mode active)
+    const active = document.activeElement;
+    const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA');
+    if (isInput) return; // let space be typed / let input handle it
+
+    e.preventDefault();
+    if (spaceDown) return; // ignore repeat
+    spaceDown = true;
+
+    if (S.timerState === 'IDLE' || S.timerState === 'STOPPED') {
+      // Start holding
+      S.holdStart = performance.now();
+      timerSetState('HOLDING');
+      S.holdTimer = setTimeout(() => {
+        if (S.timerState === 'HOLDING') timerSetState('READY');
+      }, S.HOLD_THRESHOLD);
+    } else if (S.timerState === 'RUNNING') {
+      // Stop the timer
+      stopTimer();
+    }
+    return;
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') {
+    spaceDown = false;
+    if (S.timerState === 'HOLDING') {
+      clearTimeout(S.holdTimer);
+      timerSetState('IDLE');
+    } else if (S.timerState === 'READY') {
+      // Launch!
+      startSolve();
+    }
+  }
+});
+
+function startSolve() {
+  // Generate new puzzle if needed
+  if (!S.gameActive) {
+    generatePuzzle();
+  }
+  S.gameActive = true;
+  S.timerRunningForSolve = true;
+  timerSetState('RUNNING');
+  // Focus the answer input
+  if (S.inputMode === 'text') {
+    document.getElementById('answer-text').focus();
+  } else {
+    focusFirstStructuredField();
+  }
+  clearFeedback();
+}
+
+function stopTimer() {
+  stopTimerRaf();
+  S.timerRunningForSolve = false;
+  timerSetState('STOPPED');
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME
+// ═══════════════════════════════════════════════════════
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+function getSettings() {
+  const fmt       = document.getElementById('fmt-select').value;
+  const tz        = document.getElementById('tz-select').value;
+  const tolerance = parseInt(document.getElementById('tolerance').value) || 0;
+  let minEpoch, maxEpoch;
+
+  if (S.rangeType === 'epoch') {
+    minEpoch = parseInt(document.getElementById('epoch-min').value) || 0;
+    maxEpoch = parseInt(document.getElementById('epoch-max').value) || 2000000000;
+  } else {
+    const dMin = document.getElementById('date-min').value;
+    const dMax = document.getElementById('date-max').value;
+    minEpoch = dMin ? Math.floor(new Date(dMin).getTime() / 1000) : 946684800;
+    maxEpoch = dMax ? Math.floor(new Date(dMax).getTime() / 1000) : 1767225600;
+  }
+
+  if (minEpoch > maxEpoch) [minEpoch, maxEpoch] = [maxEpoch, minEpoch];
+  return { fmt, tz, tolerance, minEpoch, maxEpoch };
+}
+
+function generatePuzzle() {
+  const { minEpoch, maxEpoch, fmt, tz } = getSettings();
+  const epoch = Math.floor(Math.random() * (maxEpoch - minEpoch + 1)) + minEpoch;
+  S.currentEpoch = epoch;
+
+  document.getElementById('epoch-display').textContent = epoch.toLocaleString('en-US', { useGrouping: false });
+  updateFormatHint(fmt, tz);
+  clearAnswerInputs();
+  clearFeedback();
+}
+
+function updateFormatHint(fmt, tz) {
+  document.getElementById('fmt-hint-text').textContent = fmt;
+  document.getElementById('tz-hint-text').textContent = tz === 'UTC' ? '(UTC)' : '(Local time)';
+}
+
+function epochToDateParts(epoch, tz) {
+  const d = new Date(epoch * 1000);
+  if (tz === 'UTC') {
+    return {
+      year:  d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day:   d.getUTCDate(),
+      hour:  d.getUTCHours(),
+      min:   d.getUTCMinutes(),
+      sec:   d.getUTCSeconds(),
+      monthName: MONTH_NAMES[d.getUTCMonth()]
+    };
+  } else {
+    return {
+      year:  d.getFullYear(),
+      month: d.getMonth() + 1,
+      day:   d.getDate(),
+      hour:  d.getHours(),
+      min:   d.getMinutes(),
+      sec:   d.getSeconds(),
+      monthName: MONTH_NAMES[d.getMonth()]
+    };
+  }
+}
+
+function formatEpoch(epoch, fmt, tz) {
+  const p = epochToDateParts(epoch, tz);
+  const Y  = String(p.year).padStart(4,'0');
+  const M  = String(p.month).padStart(2,'0');
+  const D  = String(p.day).padStart(2,'0');
+  const HH = String(p.hour).padStart(2,'0');
+  const mm = String(p.min).padStart(2,'0');
+  const ss = String(p.sec).padStart(2,'0');
+  switch(fmt) {
+    case 'YYYY-MM-DD HH:mm:ss': return `${Y}-${M}-${D} ${HH}:${mm}:${ss}`;
+    case 'YYYY-MM-DD HH:mm':    return `${Y}-${M}-${D} ${HH}:${mm}`;
+    case 'YYYY-MM-DD':          return `${Y}-${M}-${D}`;
+    case 'MM/DD/YYYY HH:mm:ss': return `${M}/${D}/${Y} ${HH}:${mm}:${ss}`;
+    case 'MM/DD/YYYY':          return `${M}/${D}/${Y}`;
+    case 'DD/MM/YYYY':          return `${D}/${M}/${Y}`;
+    case 'YYYY/MM/DD':          return `${Y}/${M}/${D}`;
+    case 'Month DD, YYYY':      return `${p.monthName} ${p.day}, ${Y}`;
+    default: return `${Y}-${M}-${D} ${HH}:${mm}:${ss}`;
+  }
+}
+
+// Parse user answer string → epoch seconds (or null on fail)
+function parseAnswer(raw, fmt, tz) {
+  raw = raw.trim();
+  if (!raw) return null;
+  let year, month, day, hour = 0, min = 0, sec = 0;
+
+  try {
+    if (fmt === 'YYYY-MM-DD HH:mm:ss') {
+      const m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+      if (!m) return null;
+      [,year,month,day,hour,min,sec] = m.map(Number);
+    } else if (fmt === 'YYYY-MM-DD HH:mm') {
+      const m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})$/);
+      if (!m) return null;
+      [,year,month,day,hour,min] = m.map(Number);
+    } else if (fmt === 'YYYY-MM-DD') {
+      const m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (!m) return null;
+      [,year,month,day] = m.map(Number);
+    } else if (fmt === 'MM/DD/YYYY HH:mm:ss') {
+      const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+      if (!m) return null;
+      [,month,day,year,hour,min,sec] = m.map(Number);
+    } else if (fmt === 'MM/DD/YYYY') {
+      const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return null;
+      [,month,day,year] = m.map(Number);
+    } else if (fmt === 'DD/MM/YYYY') {
+      const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return null;
+      [,day,month,year] = m.map(Number);
+    } else if (fmt === 'YYYY/MM/DD') {
+      const m = raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+      if (!m) return null;
+      [,year,month,day] = m.map(Number);
+    } else if (fmt === 'Month DD, YYYY') {
+      const m = raw.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+      if (!m) return null;
+      const mIdx = MONTH_NAMES.findIndex(n => n.toLowerCase() === m[1].toLowerCase());
+      if (mIdx === -1) return null;
+      month = mIdx + 1;
+      day   = Number(m[2]);
+      year  = Number(m[3]);
+    } else {
+      return null;
+    }
+  } catch { return null; }
+
+  if (tz === 'UTC') {
+    return Date.UTC(year, month - 1, day, hour, min, sec) / 1000;
+  } else {
+    return new Date(year, month - 1, day, hour, min, sec).getTime() / 1000;
+  }
+}
+
+// Parse structured inputs → epoch seconds
+function parseStructuredAnswer(fmt, tz) {
+  const get = id => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+  const year  = parseInt(get('f-year'))  || 0;
+  const month = parseInt(get('f-month')) || 0;
+  const day   = parseInt(get('f-day'))   || 0;
+  const hour  = parseInt(get('f-hour'))  || 0;
+  const min   = parseInt(get('f-min'))   || 0;
+  const sec   = parseInt(get('f-sec'))   || 0;
+
+  if (!year || !month || !day) return null;
+  if (tz === 'UTC') return Date.UTC(year, month - 1, day, hour, min, sec) / 1000;
+  return new Date(year, month - 1, day, hour, min, sec).getTime() / 1000;
+}
+
+function submitAnswer() {
+  if (S.currentEpoch === null) { generatePuzzle(); return; }
+
+  const { fmt, tz, tolerance } = getSettings();
+  let userRaw, userEpoch;
+
+  if (S.inputMode === 'text') {
+    userRaw   = document.getElementById('answer-text').value;
+    userEpoch = parseAnswer(userRaw, fmt, tz);
+  } else {
+    userRaw   = collectStructuredAnswer(fmt);
+    userEpoch = parseStructuredAnswer(fmt, tz);
+  }
+
+  const correctEpoch  = S.currentEpoch;
+  const correctAnswer = formatEpoch(correctEpoch, fmt, tz);
+  const timeTaken     = S.timerRunningForSolve
+    ? (performance.now() - S.timerStart) / 1000
+    : S.timerElapsed / 1000;
+
+  if (S.timerRunningForSolve) stopTimer();
+
+  if (userEpoch === null) {
+    showFeedback(false, 'Could not parse your answer. Check the format.', correctAnswer);
+    markAnswerField(false);
+    return;
+  }
+
+  const diff    = Math.abs(userEpoch - correctEpoch);
+  const correct = diff <= tolerance;
+
+  markAnswerField(correct);
+  showFeedback(correct, null, correctAnswer, diff > 0 ? diff : null);
+
+  // Record
+  const record = {
+    n:             S.session.length + 1,
+    epoch:         correctEpoch,
+    format:        fmt,
+    timezone:      tz,
+    correctAnswer,
+    userAnswer:    userRaw || '(empty)',
+    timeTaken:     parseFloat(timeTaken.toFixed(3)),
+    correct,
+    diff,
+    ts:            new Date().toISOString()
+  };
+  S.session.push(record);
+  addHistoryRow(record);
+  updateStats();
+
+  // Prep next puzzle after short delay
+  setTimeout(() => {
+    S.currentEpoch = null;
+    S.gameActive   = false;
+    generatePuzzle();
+    clearAnswerInputs();
+    markAnswerField(null);
+  }, 1800);
+}
+
+function skipPuzzle() {
+  if (S.timerRunningForSolve) stopTimer();
+  S.currentEpoch = null;
+  S.gameActive   = false;
+  generatePuzzle();
+  clearAnswerInputs();
+  clearFeedback();
+  markAnswerField(null);
+}
+
+function onAnswerKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  FEEDBACK & INPUT HELPERS
+// ═══════════════════════════════════════════════════════
+function showFeedback(correct, msg, correctAnswer, diff) {
+  const el = document.getElementById('feedback-msg');
+  el.classList.remove('correct-fb', 'incorrect-fb');
+  if (correct) {
+    el.classList.add('show', 'correct-fb');
+    el.innerHTML = `✓ Correct! <span class="fb-correct">${correctAnswer}</span>`;
+  } else {
+    el.classList.add('show', 'incorrect-fb');
+    const diffStr = diff != null ? ` (off by ${diff.toLocaleString()}s)` : '';
+    const custom  = msg ? `${msg}` : `✗ Incorrect${diffStr} — Correct: <span class="fb-correct">${correctAnswer}</span>`;
+    el.innerHTML  = custom;
+  }
+}
+
+function clearFeedback() {
+  const el = document.getElementById('feedback-msg');
+  el.classList.remove('show', 'correct-fb', 'incorrect-fb');
+  el.innerHTML = '';
+}
+
+function markAnswerField(correct) {
+  if (S.inputMode === 'text') {
+    const el = document.getElementById('answer-text');
+    el.classList.remove('correct', 'incorrect');
+    if (correct === true)  el.classList.add('correct');
+    if (correct === false) el.classList.add('incorrect');
+  } else {
+    document.querySelectorAll('.struct-field').forEach(el => {
+      el.classList.remove('correct', 'incorrect');
+      if (correct === true)  el.classList.add('correct');
+      if (correct === false) el.classList.add('incorrect');
+    });
+  }
+}
+
+function clearAnswerInputs() {
+  const ta = document.getElementById('answer-text');
+  if (ta) ta.value = '';
+  document.querySelectorAll('.struct-field').forEach(el => {
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  STRUCTURED INPUT
+// ═══════════════════════════════════════════════════════
+function buildStructuredInput(fmt) {
+  const row = document.getElementById('structured-input-row');
+  row.innerHTML = '';
+  const needs = fmtNeeds(fmt);
+  const sep = c => { const s = document.createElement('span'); s.className = 'struct-sep'; s.textContent = c; row.appendChild(s); };
+  const field = (id, ph, w) => {
+    const el = document.createElement('input');
+    el.type = 'text'; el.id = id; el.className = 'struct-field';
+    el.placeholder = ph; el.style.width = w;
+    el.setAttribute('autocomplete','off');
+    el.addEventListener('keydown', onStructKeydown);
+    row.appendChild(el);
+    return el;
+  };
+  const monthSelect = () => {
+    const sel = document.createElement('select');
+    sel.id = 'f-month'; sel.className = 'struct-field';
+    sel.innerHTML = '<option value="">Month</option>' +
+      MONTH_NAMES.map((n,i) => `<option value="${i+1}">${String(i+1).padStart(2,'0')} – ${n}</option>`).join('');
+    row.appendChild(sel);
+    return sel;
+  };
+
+  if (fmt === 'Month DD, YYYY') {
+    monthSelect(); sep(' ');
+    field('f-day','DD','44px'); sep(', ');
+    field('f-year','YYYY','60px');
+  } else if (fmt.startsWith('MM/DD/YYYY')) {
+    field('f-month','MM','44px'); sep('/');
+    field('f-day','DD','44px'); sep('/');
+    field('f-year','YYYY','60px');
+    if (needs.time) { sep(' '); field('f-hour','HH','44px'); sep(':'); field('f-min','mm','44px'); }
+    if (needs.sec)  { sep(':'); field('f-sec','ss','44px'); }
+  } else if (fmt.startsWith('DD/MM/YYYY')) {
+    field('f-day','DD','44px'); sep('/');
+    field('f-month','MM','44px'); sep('/');
+    field('f-year','YYYY','60px');
+  } else if (fmt.startsWith('YYYY/MM/DD')) {
+    field('f-year','YYYY','60px'); sep('/');
+    field('f-month','MM','44px'); sep('/');
+    field('f-day','DD','44px');
+  } else {
+    // YYYY-MM-DD variants
+    field('f-year','YYYY','60px'); sep('-');
+    field('f-month','MM','44px'); sep('-');
+    field('f-day','DD','44px');
+    if (needs.time) { sep(' '); field('f-hour','HH','44px'); sep(':'); field('f-min','mm','44px'); }
+    if (needs.sec)  { sep(':'); field('f-sec','ss','44px'); }
+  }
+
+  // Submit button inside structured row
+  const submitInline = document.createElement('button');
+  submitInline.textContent = '↵';
+  submitInline.className = 'btn btn-primary btn-sm';
+  submitInline.style.marginLeft = '4px';
+  submitInline.onclick = submitAnswer;
+  row.appendChild(submitInline);
+}
+
+function fmtNeeds(fmt) {
+  return {
+    time: fmt.includes('HH'),
+    sec:  fmt.includes('ss')
+  };
+}
+
+function onStructKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); return; }
+  // Auto-advance on max length
+  const el = e.currentTarget;
+  const maxLen = el.id === 'f-year' ? 4 : 2;
+  setTimeout(() => {
+    if (el.value.length >= maxLen) {
+      const fields = [...document.querySelectorAll('.struct-field')];
+      const idx = fields.indexOf(el);
+      if (idx >= 0 && idx < fields.length - 1) {
+        fields[idx+1].focus();
+      }
+    }
+  }, 0);
+}
+
+function collectStructuredAnswer(fmt) {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const p = fmtNeeds(fmt);
+  if (fmt === 'Month DD, YYYY') return `${MONTH_NAMES[(parseInt(g('f-month'))||1)-1] || g('f-month')} ${g('f-day')}, ${g('f-year')}`;
+  const date = `${g('f-year')}-${g('f-month').padStart(2,'0')}-${g('f-day').padStart(2,'0')}`;
+  if (!p.time) return date.replace(/-/g, fmt.includes('/') ? '/' : '-');
+  const time = `${g('f-hour').padStart(2,'0')}:${g('f-min').padStart(2,'0')}${p.sec ? ':'+g('f-sec').padStart(2,'0') : ''}`;
+  return `${date} ${time}`;
+}
+
+function focusFirstStructuredField() {
+  const first = document.querySelector('.struct-field');
+  if (first) first.focus();
+}
+
+// ═══════════════════════════════════════════════════════
+//  SESSION TABLE & STATS
+// ═══════════════════════════════════════════════════════
+function addHistoryRow(r) {
+  document.getElementById('empty-msg').style.display  = 'none';
+  document.getElementById('history-table').style.display = '';
+  const tbody = document.getElementById('history-body');
+  const tr = document.createElement('tr');
+  tr.className = r.correct ? 'correct-row' : 'incorrect-row';
+  tr.innerHTML = `
+    <td>${r.n}</td>
+    <td>${r.epoch}</td>
+    <td>${r.correctAnswer}</td>
+    <td>${r.userAnswer}</td>
+    <td>${r.timeTaken.toFixed(3)}</td>
+    <td><span class="badge ${r.correct ? 'badge-green' : 'badge-red'}">${r.correct ? '✓ Correct' : '✗ Wrong'}</span></td>
+  `;
+  tbody.insertBefore(tr, tbody.firstChild); // newest first
+}
+
+function updateStats() {
+  const n       = S.session.length;
+  const correct = S.session.filter(r => r.correct).length;
+  const wrong   = n - correct;
+  const times   = S.session.map(r => r.timeTaken);
+  const avg     = times.length ? (times.reduce((a,b)=>a+b,0) / times.length).toFixed(2) : '—';
+  const best    = times.length ? Math.min(...times).toFixed(3) : '—';
+  const acc     = n ? Math.round(correct / n * 100) + '%' : '—';
+
+  document.getElementById('stat-total').textContent   = n;
+  document.getElementById('stat-correct').textContent = correct;
+  document.getElementById('stat-wrong').textContent   = wrong;
+  document.getElementById('stat-acc').textContent     = acc;
+  document.getElementById('stat-avg').textContent     = avg;
+  document.getElementById('stat-best').textContent    = best;
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════
+function exportCSV() {
+  if (!S.session.length) { alert('No session data yet!'); return; }
+  const header = ['#','Epoch','Format','Timezone','Correct Answer','Your Answer','Time (s)','Correct','Diff (s)','Timestamp'];
+  const rows = S.session.map(r => [
+    r.n, r.epoch, r.format, r.timezone, r.correctAnswer,
+    r.userAnswer, r.timeTaken, r.correct ? 'true' : 'false',
+    r.diff, r.ts
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  download(csv, 'epoch-speedrun-session.csv', 'text/csv');
+}
+
+function exportJSON() {
+  if (!S.session.length) { alert('No session data yet!'); return; }
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    total:      S.session.length,
+    correct:    S.session.filter(r=>r.correct).length,
+    attempts:   S.session
+  };
+  download(JSON.stringify(payload, null, 2), 'epoch-speedrun-session.json', 'application/json');
+}
+
+function download(content, filename, mime) {
+  const a  = document.createElement('a');
+  a.href   = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI CONTROLS
+// ═══════════════════════════════════════════════════════
+function setRangeType(type) {
+  S.rangeType = type;
+  document.getElementById('epoch-range-inputs').style.display = type === 'epoch' ? '' : 'none';
+  document.getElementById('date-range-inputs').style.display  = type === 'date'  ? '' : 'none';
+  document.getElementById('rt-epoch').classList.toggle('active', type === 'epoch');
+  document.getElementById('rt-date').classList.toggle('active',  type === 'date');
+}
+
+function setInputMode(mode) {
+  S.inputMode = mode;
+  const fmt = document.getElementById('fmt-select').value;
+  document.getElementById('text-input-row').style.display       = mode === 'text'       ? '' : 'none';
+  document.getElementById('structured-input-row').style.display = mode === 'structured' ? '' : 'none';
+  document.getElementById('mode-text').classList.toggle('active',   mode === 'text');
+  document.getElementById('mode-struct').classList.toggle('active', mode === 'structured');
+  if (mode === 'structured') buildStructuredInput(fmt);
+}
+
+function onFormatChange() {
+  const fmt = document.getElementById('fmt-select').value;
+  const tz  = document.getElementById('tz-select').value;
+  updateFormatHint(fmt, tz);
+  if (S.inputMode === 'structured') buildStructuredInput(fmt);
+}
+
+document.getElementById('tz-select').addEventListener('change', () => {
+  const fmt = document.getElementById('fmt-select').value;
+  const tz  = document.getElementById('tz-select').value;
+  updateFormatHint(fmt, tz);
+});
+
+// Collapsible settings
+document.getElementById('settings-toggle').addEventListener('click', () => {
+  const sec = document.getElementById('settings-section');
+  const hidden = sec.style.display === 'none';
+  sec.style.display = hidden ? '' : 'none';
+  document.getElementById('settings-toggle').textContent = hidden ? '⚙ Settings' : '⚙ Hide';
+});
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+generatePuzzle();
+</script>
+</body>
+</html>
