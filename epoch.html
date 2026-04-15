@@ -307,7 +307,7 @@ select.struct-field { width: 120px; padding: 8px 6px; cursor: pointer; }
 }
 #timer-display.holding  { color: var(--timer-holding); }
 #timer-display.ready    { color: var(--timer-ready); }
-#timer-display.running  { color: var(--timer-running); }
+#timer-display.running  { color: var(--timer-running); cursor: pointer; }
 #timer-display.stopped  { color: var(--timer-stopped); }
 
 #timer-hint {
@@ -396,6 +396,95 @@ select.struct-field { width: 120px; padding: 8px 6px; cursor: pointer; }
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* ─── Input shortcut hint ─────────────────────────────── */
+#input-shortcuts {
+  font-size: .68rem;
+  color: var(--text-muted);
+  text-align: center;
+  user-select: none;
+  letter-spacing: .02em;
+}
+#input-shortcuts kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: .67rem;
+  font-family: var(--mono);
+}
+
+/* ─── Reference slider ────────────────────────────────── */
+.ref-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ref-section-header h2 { margin-bottom: 0; }
+.ref-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .68rem;
+  padding: 2px 8px;
+  transition: color .12s, border-color .12s;
+}
+.ref-toggle-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+#ref-content { display: flex; flex-direction: column; gap: 10px; }
+#ref-content.ref-hidden { display: none; }
+
+#ref-slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 4px;
+  margin: 4px 0 2px;
+}
+
+.ref-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ref-lbl {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  width: 40px;
+  flex-shrink: 0;
+}
+#ref-epoch-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: .83rem;
+  padding: 5px 8px;
+}
+#ref-epoch-input:focus { outline: none; border-color: var(--accent); }
+#ref-date-val {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: .83rem;
+  color: var(--accent-hover);
+  word-break: break-all;
+  line-height: 1.4;
+}
+.ref-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: .62rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-top: -4px;
 }
 
 /* ─── Scrollbar styling ───────────────────────────────── */
@@ -492,6 +581,29 @@ select.struct-field { width: 120px; padding: 8px 6px; cursor: pointer; }
       </div>
     </div>
 
+    <!-- Reference slider section -->
+    <div class="panel-section">
+      <div class="ref-section-header">
+        <h2>Reference Slider</h2>
+        <button class="ref-toggle-btn" id="ref-toggle-btn" onclick="toggleRef()">hide</button>
+      </div>
+      <div id="ref-content">
+        <input type="range" id="ref-slider" min="946684800" max="1767225600" value="1356998400" step="86400" oninput="onRefSlider(this.value)">
+        <div class="ref-range-labels">
+          <span id="ref-min-lbl">2000</span>
+          <span id="ref-max-lbl">2025</span>
+        </div>
+        <div class="ref-row">
+          <span class="ref-lbl">Epoch</span>
+          <input type="number" id="ref-epoch-input" value="1356998400" oninput="onRefEpochInput(this.value)" placeholder="seconds…">
+        </div>
+        <div class="ref-row">
+          <span class="ref-lbl">Date</span>
+          <span id="ref-date-val">—</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Stats section -->
     <div class="panel-section">
       <h2>Session Stats</h2>
@@ -553,6 +665,11 @@ select.struct-field { width: 120px; padding: 8px 6px; cursor: pointer; }
       </div>
 
       <div id="feedback-msg"></div>
+      <div id="input-shortcuts">
+        <kbd>Enter</kbd> submit &nbsp;·&nbsp;
+        <kbd>Esc</kbd> unfocus input &nbsp;·&nbsp;
+        <kbd>Space</kbd> start / stop timer
+      </div>
     </div>
 
     <!-- Timer -->
@@ -617,6 +734,11 @@ const S = {
 const timerEl   = document.getElementById('timer-display');
 const timerHint = document.getElementById('timer-hint');
 
+// Click the running timer to stop it (useful while input is focused)
+timerEl.addEventListener('click', () => {
+  if (S.timerState === 'RUNNING') stopTimer();
+});
+
 function timerSetState(state) {
   S.timerState = state;
   timerEl.className = '';
@@ -630,7 +752,7 @@ function timerSetState(state) {
     timerHint.textContent = 'Release to start!';
   } else if (state === 'RUNNING') {
     timerEl.classList.add('running');
-    timerHint.textContent = 'Submit answer (Enter) to stop the timer';
+    timerHint.innerHTML = 'Submit <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:.7rem">Enter</kbd> · or <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:.7rem">Esc</kbd> → <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:.7rem">Space</kbd> · or click the timer to stop';
     startTimerRaf();
   } else if (state === 'STOPPED') {
     timerEl.classList.add('stopped');
@@ -674,25 +796,42 @@ function formatTime(ms) {
 let spaceDown = false;
 
 document.addEventListener('keydown', (e) => {
+  const active = document.activeElement;
+
+  // Esc: release focus from any input so spacebar can control the timer
+  if (e.key === 'Escape') {
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA')) {
+      e.preventDefault();
+      active.blur();
+    }
+    return;
+  }
+
   if (e.key === ' ') {
-    // Don't intercept if user is typing in an input (text mode active)
-    const active = document.activeElement;
-    const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA');
-    if (isInput) return; // let space be typed / let input handle it
+    // The free-text answer field may contain literal spaces (e.g. "2009-02-13 23:31:30"),
+    // so let the browser handle it there. Structured fields never need a space character,
+    // and all other contexts should control the timer.
+    const isAnswerTextField = active && active.id === 'answer-text';
+    if (isAnswerTextField) return;
+
+    // Any non-answer-field input (settings fields, etc.) should also not be hijacked,
+    // unless it's a structured answer field (which we DO want to pass to the timer).
+    const isNonAnswerInput = active &&
+      (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA') &&
+      !active.classList.contains('struct-field');
+    if (isNonAnswerInput) return;
 
     e.preventDefault();
-    if (spaceDown) return; // ignore repeat
+    if (spaceDown) return; // ignore key-repeat
     spaceDown = true;
 
     if (S.timerState === 'IDLE' || S.timerState === 'STOPPED') {
-      // Start holding
       S.holdStart = performance.now();
       timerSetState('HOLDING');
       S.holdTimer = setTimeout(() => {
         if (S.timerState === 'HOLDING') timerSetState('READY');
       }, S.HOLD_THRESHOLD);
     } else if (S.timerState === 'RUNNING') {
-      // Stop the timer
       stopTimer();
     }
     return;
@@ -954,6 +1093,8 @@ function submitAnswer() {
     generatePuzzle();
     clearAnswerInputs();
     markAnswerField(null);
+    // Blur so spacebar is immediately ready to start the next solve
+    if (document.activeElement) document.activeElement.blur();
   }, 1800);
 }
 
@@ -1190,6 +1331,68 @@ function download(content, filename, mime) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  REFERENCE SLIDER
+// ═══════════════════════════════════════════════════════
+function initRefSlider() {
+  updateRefRange();
+  const mid = Math.floor((parseInt(document.getElementById('ref-slider').min) +
+                          parseInt(document.getElementById('ref-slider').max)) / 2);
+  document.getElementById('ref-slider').value      = mid;
+  document.getElementById('ref-epoch-input').value = mid;
+  updateRefDisplay(mid);
+}
+
+function updateRefRange() {
+  const { minEpoch, maxEpoch } = getSettings();
+  const slider = document.getElementById('ref-slider');
+  slider.min  = minEpoch;
+  slider.max  = maxEpoch;
+  // ~1000 draggable positions regardless of range size
+  slider.step = Math.max(1, Math.floor((maxEpoch - minEpoch) / 1000));
+
+  // Update edge labels (show year only for readability)
+  const labelFor = e => new Date(e * 1000).getUTCFullYear();
+  document.getElementById('ref-min-lbl').textContent = labelFor(minEpoch);
+  document.getElementById('ref-max-lbl').textContent = labelFor(maxEpoch);
+
+  // Clamp current value into new range
+  const cur = parseInt(slider.value);
+  if (cur < minEpoch || cur > maxEpoch) {
+    const mid = Math.floor((minEpoch + maxEpoch) / 2);
+    slider.value = mid;
+    document.getElementById('ref-epoch-input').value = mid;
+    updateRefDisplay(mid);
+  }
+}
+
+function onRefSlider(val) {
+  const epoch = parseInt(val);
+  document.getElementById('ref-epoch-input').value = epoch;
+  updateRefDisplay(epoch);
+}
+
+function onRefEpochInput(val) {
+  const epoch = parseInt(val);
+  if (isNaN(epoch)) return;
+  const slider = document.getElementById('ref-slider');
+  // Clamp to slider range so it doesn't go out of bounds visually
+  slider.value = Math.min(Math.max(epoch, parseInt(slider.min)), parseInt(slider.max));
+  updateRefDisplay(epoch);
+}
+
+function updateRefDisplay(epoch) {
+  const { fmt, tz } = getSettings();
+  document.getElementById('ref-date-val').textContent = formatEpoch(epoch, fmt, tz);
+}
+
+function toggleRef() {
+  const content = document.getElementById('ref-content');
+  const btn     = document.getElementById('ref-toggle-btn');
+  const nowHidden = content.classList.toggle('ref-hidden');
+  btn.textContent = nowHidden ? 'show' : 'hide';
+}
+
+// ═══════════════════════════════════════════════════════
 //  UI CONTROLS
 // ═══════════════════════════════════════════════════════
 function setRangeType(type) {
@@ -1215,12 +1418,24 @@ function onFormatChange() {
   const tz  = document.getElementById('tz-select').value;
   updateFormatHint(fmt, tz);
   if (S.inputMode === 'structured') buildStructuredInput(fmt);
+  // Refresh reference display with new format
+  const refEpoch = parseInt(document.getElementById('ref-epoch-input').value);
+  if (!isNaN(refEpoch)) updateRefDisplay(refEpoch);
 }
 
 document.getElementById('tz-select').addEventListener('change', () => {
   const fmt = document.getElementById('fmt-select').value;
   const tz  = document.getElementById('tz-select').value;
   updateFormatHint(fmt, tz);
+  // Refresh reference display with new timezone
+  const refEpoch = parseInt(document.getElementById('ref-epoch-input').value);
+  if (!isNaN(refEpoch)) updateRefDisplay(refEpoch);
+});
+
+// Keep ref slider range in sync with range-settings inputs
+['epoch-min','epoch-max','date-min','date-max'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', updateRefRange);
 });
 
 // Collapsible settings
@@ -1235,6 +1450,7 @@ document.getElementById('settings-toggle').addEventListener('click', () => {
 //  INIT
 // ═══════════════════════════════════════════════════════
 generatePuzzle();
+initRefSlider();
 </script>
 </body>
 </html>
